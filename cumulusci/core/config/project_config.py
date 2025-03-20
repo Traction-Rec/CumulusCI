@@ -334,8 +334,18 @@ class BaseProjectConfig(BaseTaskFlowConfig, ProjectConfigPropertiesMixin):
         path = Path.cwd().resolve()
         paths = chain((path,), path.parents)
         for path in paths:
-            if (path / ".git").is_dir():
+            git_path = path / ".git"
+            if git_path.is_dir():
                 return str(path)
+            # Handle Git worktree case where .git is a file containing gitdir reference
+            elif git_path.is_file():
+                try:
+                    with open(git_path) as f:
+                        content = f.read().strip()
+                        if content.startswith("gitdir:"):
+                            return str(path)
+                except (IOError, OSError):
+                    continue
 
     @property
     def server_domain(self) -> Optional[str]:

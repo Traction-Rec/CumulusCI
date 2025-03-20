@@ -13,8 +13,20 @@ def git_path(repo_root: str, tail: Any = None) -> Optional[pathlib.Path]:
     """
     path = None
     if repo_root:
-        path = pathlib.Path(repo_root) / ".git"
-        if tail is not None:
+        git_path = pathlib.Path(repo_root) / ".git"
+        if git_path.is_dir():
+            path = git_path
+        # Handle Git worktree case where .git is a file containing gitdir reference
+        elif git_path.is_file():
+            try:
+                with open(git_path) as f:
+                    content = f.read().strip()
+                    if content.startswith("gitdir:"):
+                        gitdir = content[7:].strip()
+                        path = pathlib.Path(gitdir)
+            except (IOError, OSError):
+                pass
+        if path is not None and tail is not None:
             path = path / str(tail)
     return path
 
